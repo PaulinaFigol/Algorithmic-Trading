@@ -88,7 +88,9 @@ def average_trade_returns(indicex_of_positive_predictions, data):
             index_max = index_n+10
             #Realised return on day 10
             if data.loc[index_max, 'stock'] == data.loc[index_n, 'stock']:
-                data.loc[index_n, 'trade returns'] = data.loc[index_max, 'price_change_rate_1d']
+                #data.loc[index_n, 'trade returns'] = data.loc[index_max, 'price_change_rate_1d']
+                data.loc[index_n, 'trade returns'] = data.loc[index_n+1:index_max,'price_change_rate_1d'].cumsum()[index_max]
+                
         #If list is not empty realise the trade as soon as the cummulative price change >= 5%
         else:
             idx_of_first_True = data.loc[index_n+1:index_n+10,'price_change_rate_1d'].cumsum()[bool_hitting_5Perc].index[0]

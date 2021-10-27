@@ -7,6 +7,7 @@ import seaborn as sns
 from matplotlib import pyplot
 import numpy as np
 import plotly.express as px
+import re as re
 
 
 
@@ -73,28 +74,35 @@ def RSI_visualise(before_end_date, after_start_date, data, stock, period):
     plt.show()
     
     
-# Calculate avrage trade returns    
-def average_trade_returns(indicex_of_positive_predictions, data):
-    #Iterate over the positive predictions to calculate return
-    for i in indicex_of_positive_predictions:
-        index_n = i
-        #Find cumulative return by row where return >= 5%
-        bool_hitting_5Perc = data.loc[index_n+1:index_n+10,'price_change_rate_1d'].cumsum()>= 5
-        # create list of indices that hit that target
-        select_indices = list(data.loc[index_n+1:index_n+10,:][bool_hitting_5Perc].index)
-        #If list is empty (no profits higher than 5%) take the return from day 10 after the stock was bought
-        if not select_indices:
-            #Index from day 10
-            index_max = index_n+10
-            #Realised return on day 10
-            if data.loc[index_max, 'stock'] == data.loc[index_n, 'stock']:
-                #data.loc[index_n, 'trade returns'] = data.loc[index_max, 'price_change_rate_1d']
-                data.loc[index_n, 'trade returns'] = data.loc[index_n+1:index_max,'price_change_rate_1d'].cumsum()[index_max]
-                
-        #If list is not empty realise the trade as soon as the cummulative price change >= 5%
-        else:
-            idx_of_first_True = data.loc[index_n+1:index_n+10,'price_change_rate_1d'].cumsum()[bool_hitting_5Perc].index[0]
-            if data.loc[idx_of_first_True, 'stock'] == data.loc[index_n, 'stock']:
-                data.loc[index_n, 'trade returns'] = list(data.loc[index_n+1:index_n+10,'price_change_rate_1d'].cumsum()[bool_hitting_5Perc])[0]
-    print("Median percentage return: %.2f%%" % (data[data['y_pred']==1]['trade returns'].median()))
-    print("Mean percentage return: %.2f%%" % (data[data['y_pred']==1]['trade returns'].mean()))
+## Calculate avrage trade returns
+def average_trade_returns(data):
+    
+    price_ch_days = {}
+    data['trade returns'] = np.nan
+    data['returns_day'] = np.nan
+    
+    for n in range(1,11):
+        price_ch_days['price_change_rate_'+str(n)] = -(data.groupby(by="stock", dropna=False)[['price']].diff(-n))
+        data['price_change_rate_'+str(n)] = price_ch_days['price_change_rate_'+str(n)]
+   
+    for day in range(1,11):
+        data['price_change_rate_'+str(day)] = data['price_change_rate_'+str(day)]/data['price']*100
+    
+    price_change_days = price_ch_days.keys()
+    
+    df = data[data['y_pred']==1]
+
+    p = df[price_change_days].apply(lambda row: row[row >=5].index, axis=1) 
+    
+    idx = [p[i].empty for i in p.index]
+
+    df.loc[~np.array(idx),'returns_day'] = [p[rows][0] for rows in df[~np.array(idx)].index]
+    df.loc[np.array(idx),'returns_day'] = 'price_change_rate_10'
+
+    df['trade returns'] = [df.loc[rows,df.loc[rows,'returns_day']] for rows in df.index] 
+
+    data.loc[df.index,['trade returns', 'returns_day']] = df.loc[df.index,['trade returns', 'returns_day']]
+    
+    print("Median percentage return: %.2f%%" % (df['trade returns'].median()))
+    print("Mean percentage return: %.2f%%" % (df['trade returns'].mean()))
+    

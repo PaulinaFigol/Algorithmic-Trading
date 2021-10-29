@@ -14,3 +14,6 @@ New features to consider:
 
 Python Algorithmic Trading Library for backtesting:
 - https://gbeced.github.io/pyalgotrade/
+
+Executing your trading algorithms:
+- https://alpaca.markets/algotrading

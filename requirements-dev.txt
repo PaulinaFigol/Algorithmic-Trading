@@ -1,0 +1,5 @@
+# Requirements
+Quandl
+yfinance
+datapackage
+py-xgboost
